@@ -1,0 +1,7 @@
+{
+  "name": "sim-sms",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "description": "Lokalny moduł Expo: wysyłka SMS z karty SIM (Android SmsManager) z potwierdzeniem wysłania"
+}

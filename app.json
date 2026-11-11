@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Klima Serwis",
+    "slug": "klima-serwis",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0E1620",
+    "android": {
+      "package": "pl.klimaserwis.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.SEND_SMS",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-task-manager",
+      "expo-background-task",
+      "expo-sharing",
+      "expo-file-system",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        { "color": "#4FC3E0" }
+      ],
+      [
+        "expo-build-properties",
+        { "android": { "minSdkVersion": 26 } }
+      ]
+    ]
+  }
+}
