@@ -3,6 +3,11 @@
 Baza klientów serwisu klimatyzacji z przypomnieniami SMS o przeglądzie. Działa w 100% offline
 na telefonie: dane w lokalnej bazie SQLite, wysyłka z karty SIM, bez żadnego serwera.
 
+## Pobierz APK
+
+Najnowsza wersja (budowana automatycznie przez GitHub Actions po każdej zmianie w `main`):
+https://github.com/opatrzykkonrad-cmd/Klima-mobile/releases/latest/download/klima-serwis.apk
+
 ## Stack
 
 | Warstwa | Biblioteka |
