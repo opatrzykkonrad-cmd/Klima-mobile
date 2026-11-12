@@ -10,6 +10,9 @@ import { getSettings } from './src/db/settings';
 import { scheduleDailyCheck, setupNotifications } from './src/services/notifications';
 import { registerBackgroundTask, runAutoCheck } from './src/services/background';
 import { toast } from './src/services/actions';
+import { ErrorBoundary, ErrorScreen } from './src/components/ErrorScreen';
+import { CapturedError, getCapturedError, onCapturedError, reportError } from './src/crashGuard';
+import { SimSms } from './modules/sim-sms';
 
 async function autoCheckWithFeedback() {
   try {
@@ -25,6 +28,10 @@ async function autoCheckWithFeedback() {
 export default function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [jsError, setJsError] = useState<CapturedError | null>(getCapturedError());
+  const [nativeCrash, setNativeCrash] = useState<string | null>(() => SimSms.getLastCrash());
+
+  useEffect(() => onCapturedError(setJsError), []);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.bg);
@@ -41,6 +48,7 @@ export default function App() {
         await autoCheckWithFeedback();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
+        reportError(e, 'Start aplikacji');
       }
     })();
 
@@ -50,6 +58,21 @@ export default function App() {
     });
     return () => sub.remove();
   }, []);
+
+  if (jsError) {
+    return <ErrorScreen title="Błąd aplikacji" message={jsError.message} details={`${jsError.source}\n\n${jsError.stack}`} />;
+  }
+
+  if (nativeCrash) {
+    return (
+      <ErrorScreen
+        title="Poprzednie uruchomienie zakończyło się awarią"
+        message="Android zamknął aplikację z powodu błędu systemowego. Poniżej raport z tej awarii."
+        details={nativeCrash}
+        onDismiss={() => { SimSms.clearLastCrash(); setNativeCrash(null); }}
+      />
+    );
+  }
 
   if (error) {
     return (
@@ -64,7 +87,9 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       {ready ? (
-        <Navigation />
+        <ErrorBoundary>
+          <Navigation />
+        </ErrorBoundary>
       ) : (
         <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.accent} size="large" />
