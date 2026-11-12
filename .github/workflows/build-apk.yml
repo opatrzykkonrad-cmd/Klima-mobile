@@ -24,7 +24,7 @@ jobs:
         working-directory: android
         run: |
           set -o pipefail
-          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a 2>&1 | tee ../build.log
+          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64 2>&1 | tee ../build.log
       - name: Report build error
         if: failure()
         run: |
@@ -33,11 +33,49 @@ jobs:
             | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
           echo "::error title=Gradle::${MSG}"
       - run: cp android/app/build/outputs/apk/release/app-release.apk klima-serwis.apk
-      - name: Publish release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        with: { name: apk, path: klima-serwis.apk, retention-days: 7 }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Klima Serwis – build ${{ github.run_number }}
+          files: klima-serwis.apk
+
+  smoke-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: apk }
+      - name: Enable KVM
         run: |
-          gh release create "build-${{ github.run_number }}" klima-serwis.apk \
-            --repo "${{ github.repository }}" --target "${{ github.sha }}" --latest \
-            --title "Klima Serwis – build ${{ github.run_number }}" \
-            --notes "APK zbudowany automatycznie z commita ${{ github.sha }}."
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Run app on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r klima-serwis.apk
+            adb logcat -c
+            adb shell monkey -p pl.klimaserwis.app -c android.intent.category.LAUNCHER 1
+            sleep 40
+            adb shell pidof pl.klimaserwis.app > pid.txt || true
+            adb logcat -d > logcat.txt
+            adb exec-out screencap -p > screen.png || true
+      - name: Report result
+        if: always()
+        run: |
+          esc() { sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g'; }
+          if [ -s pid.txt ]; then echo "::notice title=Smoke::Aplikacja dziala po 40 s (PID $(cat pid.txt))"; else echo "::error title=Smoke::Aplikacja NIE dziala po 40 s"; fi
+          test -f logcat.txt || exit 0
+          CRASH=$(grep -E "FATAL EXCEPTION|AndroidRuntime|Caused by|ReactNativeJS|ReactNative|SoLoader|Expo|klimaserwis" logcat.txt | grep -vE "ActivityManager: (Start proc|Displayed)" | head -150 | esc)
+          echo "::error title=Logcat::${CRASH:-brak wpisow}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: smoke-logs, path: "logcat.txt\nscreen.png", retention-days: 7 }
