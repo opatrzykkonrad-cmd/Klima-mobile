@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootScreenProps } from '../navigation/types';
 import type { FieldErrors } from '../types';
 import { createClient, deleteClient, getClient, updateClient } from '../db/clients';
@@ -14,6 +15,7 @@ import { toast } from '../services/actions';
 type IntervalChoice = 6 | 12 | 0; // 0 = inny
 
 export default function ClientFormScreen({ navigation, route }: RootScreenProps<'ClientForm'>) {
+  const insets = useSafeAreaInsets();
   const id = route.params?.id;
   const [loading, setLoading] = useState(!!id);
   const [saving, setSaving] = useState(false);
@@ -101,7 +103,7 @@ export default function ClientFormScreen({ navigation, route }: RootScreenProps<
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior="height">
-      <ScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl * 2 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl * 2 + insets.bottom }} keyboardShouldPersistTaps="handled">
         <Field label="Imię i nazwisko" value={firstName} onChangeText={setFirstName} error={errors.first_name}
           autoCapitalize="words" returnKeyType="next" placeholder="np. Jan Kowalski" />
         <Field label="Nazwa firmy (opcjonalnie)" value={companyName} onChangeText={setCompanyName} error={errors.company_name}

@@ -3,6 +3,7 @@ import { DarkTheme, NavigationContainer, Theme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList, TabParamList } from './types';
 import { colors } from '../theme';
 import DashboardScreen from '../screens/DashboardScreen';
@@ -37,13 +38,15 @@ const TAB_ICONS: Record<keyof TabParamList, IconName> = {
 };
 
 function Tabs() {
+  // Odstęp nad systemowym paskiem nawigacji (przyciski / gesty) – Android rysuje aplikację pod nim.
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.mute,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 64, paddingBottom: 8, paddingTop: 6 },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 58 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name={TAB_ICONS[route.name]} color={color} size={size} />,
       })}

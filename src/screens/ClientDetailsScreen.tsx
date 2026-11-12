@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootScreenProps } from '../navigation/types';
 import type { Client, SmsLog } from '../types';
 import { getClient } from '../db/clients';
@@ -15,6 +16,7 @@ import { sendSms } from '../services/sms';
 import { LogItem } from './LogsScreen';
 
 export default function ClientDetailsScreen({ navigation, route }: RootScreenProps<'ClientDetails'>) {
+  const insets = useSafeAreaInsets();
   const { id } = route.params;
   const [client, setClient] = useState<Client | null>(null);
   const [preview, setPreview] = useState('');
@@ -68,7 +70,7 @@ export default function ClientDetailsScreen({ navigation, route }: RootScreenPro
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl * 2 }}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ padding: space.lg, paddingBottom: space.xl * 2 + insets.bottom }}>
       <Card style={{ borderLeftWidth: 5, borderLeftColor: sc.fg }}>
         <View style={s.row}>
           <Text style={s.next}>{toPL(client.next_service_date)}</Text>
