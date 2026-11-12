@@ -1,0 +1,55 @@
+name: Smoke test (latest APK)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/smoke.yml']
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Download latest APK
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh release download --repo "${{ github.repository }}" --pattern klima-serwis.apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Run app on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r klima-serwis.apk
+            adb logcat -c
+            adb shell monkey -p pl.klimaserwis.app -c android.intent.category.LAUNCHER 1
+            sleep 40
+            adb shell pidof pl.klimaserwis.app > pid.txt || true
+            adb logcat -d -v brief > logcat.txt
+      - name: Report crash
+        if: always()
+        run: |
+          esc() { sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g'; }
+          if [ -s pid.txt ]; then echo "::notice title=Smoke::Aplikacja dziala po 40 s"; else echo "::error title=Smoke::Aplikacja NIE dziala po 40 s"; fi
+          test -f logcat.txt || exit 0
+          cut -c1-240 logcat.txt > l.txt
+          # 1) wyjatek Java/Kotlin  2) awaria natywna (tombstone)  3) bledy JS/React Native/Expo
+          awk '/FATAL EXCEPTION/{f=60} f>0{print; f--}' l.txt > a1.txt
+          grep -E "Fatal signal|F DEBUG|F/DEBUG|DEBUG   :" l.txt | head -60 > a2.txt
+          grep -E "^E/(ReactNativeJS|ReactNative|unknown:ReactNative|Expo|SoLoader|AndroidRuntime|ExpoModulesCore|SQLite)|^W/ReactNativeJS" l.txt | head -60 > a3.txt
+          grep -E "Process pl.klimaserwis.app .*(died|has died)|Force finishing|ANR in" l.txt | head -10 > a4.txt
+          n=0
+          for f in a1 a2 a3 a4; do
+            [ -s $f.txt ] || continue
+            split -l 18 -d $f.txt part_${f}_
+            for p in part_${f}_*; do n=$((n+1)); [ $n -le 9 ] && echo "::error title=$f-$p::$(cat $p | esc)"; done
+          done
+          [ $n -eq 0 ] && echo "::warning title=Logcat::Brak wpisow o awarii"
+          true

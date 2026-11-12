@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    paths-ignore: ['.github/workflows/smoke.yml']
 permissions:
   contents: write
 concurrency:
@@ -35,11 +36,14 @@ jobs:
       - run: cp android/app/build/outputs/apk/release/app-release.apk klima-serwis.apk
       - uses: actions/upload-artifact@v4
         with: { name: apk, path: klima-serwis.apk, retention-days: 7 }
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: Klima Serwis – build ${{ github.run_number }}
-          files: klima-serwis.apk
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" klima-serwis.apk \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" --latest \
+            --title "Klima Serwis – build ${{ github.run_number }}" \
+            --notes "APK zbudowany automatycznie z commita ${{ github.sha }}."
 
   smoke-test:
     needs: build
