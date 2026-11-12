@@ -32,11 +32,18 @@
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",
-        { "color": "#4FC3E0" }
+        {
+          "color": "#4FC3E0"
+        }
       ],
       [
         "expo-build-properties",
-        { "android": { "minSdkVersion": 26 } }
+        {
+          "android": {
+            "minSdkVersion": 26,
+            "extraProguardRules": "# WorkManager (expo-background-task) tworzy swoja baze Room przez refleksje - R8 nie moze usunac konstruktorow.\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.work.impl.WorkDatabase_Impl { *; }\n-keep class androidx.work.** { *; }\n-dontwarn androidx.work.**"
+          }
+        }
       ]
     ]
   }
